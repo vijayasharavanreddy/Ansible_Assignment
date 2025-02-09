@@ -1,0 +1,4 @@
+[webservers]
+VM1 ansible_host=18.144.133.145 ansible_user=ubuntu ansible_ssh_private_key_file=~/Downloads/Ansible_Assignment.pem
+VM2 ansible_host=54.183.25.70 ansible_user=ubuntu ansible_ssh_private_key_file=~/Downloads/Ansible_Assignment.pem
+

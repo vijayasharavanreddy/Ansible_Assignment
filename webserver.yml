@@ -1,0 +1,83 @@
+---
+- name: Manage webserver
+  hosts: webservers
+  become: true
+  vars:
+    deploy: false  # Set to true for deployment, false for undeployment
+  tasks:
+    - name: Ensure Apache is installed (deploy only)
+      apt:
+        name: apache2
+        state: present
+        update_cache: true
+      when: deploy | bool
+
+    - name: Ensure default VirtualHost config file exists (deploy only)
+      copy:
+        dest: /etc/apache2/sites-available/000-default.conf
+        content: |
+          <VirtualHost *:8080>
+              DocumentRoot /var/www/html
+          </VirtualHost>
+        mode: '0644'
+      when: deploy | bool
+
+    - name: Configure Apache to listen on port 8080 (deploy only)
+      lineinfile: 
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen 80'
+        line: 'Listen 8080'
+        state: present
+      when: deploy | bool
+
+    - name: Update VirtualHost to port 8080 (deploy only)
+      replace:
+        path: /etc/apache2/sites-available/000-default.conf
+        regexp: '(<VirtualHost \*:)(80)(>)'
+        replace: '\1 8080\3'
+      when: deploy | bool
+
+    - name: Restart Apache to apply changes (deploy only)
+      service:
+        name: apache2
+        state: restarted
+      when: deploy | bool
+
+    - name: Create custom index.html (deploy only)
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          Hello World from SJSU - {{ inventory_hostname }}
+      when: deploy | bool
+
+    # UNDEPLOY TASKS
+    - name: Stop Apache service (undeploy only)
+      service:
+        name: apache2
+        state: stopped
+      when: not deploy | bool
+
+    - name: Disable Apache service (undeploy only)
+      systemd:
+        name: apache2
+        enabled: no
+      when: not deploy | bool
+
+    - name: Remove index.html file (undeploy only)
+      file:
+        path: /var/www/html/index.html
+        state: absent
+      when: not deploy | bool
+
+    - name: Remove Apache VirtualHost configuration (undeploy only)
+      file:
+        path: /etc/apache2/sites-available/000-default.conf
+        state: absent
+      when: not deploy | bool
+
+    - name: Uninstall Apache (undeploy only)
+      apt:
+        name: apache2
+        state: absent
+      when: not deploy | bool
+
